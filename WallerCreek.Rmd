@@ -1,0 +1,134 @@
+---
+title: "Waller Creek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 7, fig.height = 7, fig.align = "center", dpi = 143)
+```
+
+## Rayshader Practice R Markdown
+
+Training page: https://github.com/PennMUSA/MasterClass2019_3DMappingAndViz/blob/master/MusaMasterclass.md
+
+```{r install, warning=FALSE, message=FALSE}
+
+# install.packages(c("ggplot2","raster", "rayrender", "spatstat", "spatstat.utils","suncalc","here", "sp","lubridate","rgdal", "magick", "av","xml2", "dplyr"))
+
+#macOS: xcrun issue? type "xcode-select --install" into terminal
+#macOS imager.so or libx11 errors? Install X11: https://www.xquartz.org
+
+# install.packages("remotes")
+
+# remotes::install_github("giswqs/whiteboxR")
+# whitebox::wbt_init()
+
+# remotes::install_github("tylermorganwall/rayshader")
+```
+
+
+Now load the packages:
+
+```{r library, warning=FALSE, message=FALSE}
+
+options(rgl.useNULL = FALSE)
+library(ggplot2)
+library(whitebox)
+library(rayshader)
+library(rayrender)
+library(raster)
+library(spatstat)
+library(spatstat.utils)
+library(suncalc)
+library(sp)
+library(lubridate)
+library(rgdal)
+library(rgl)
+
+setwd(here::here())
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r loadtif, fig.width = 4, fig.height = 4}
+
+
+# topo <- raster("images/20190702_WallerCreekExistingTopo.tif")
+# res(topo)
+# 
+# topoAgg <- aggregate(topo, fact=20)
+# res(topoAgg)
+# 
+# topomat <- raster_to_matrix(topoAgg)
+
+
+
+
+```
+
+
+```{r pierImport}
+
+topo <- raster("images/MVVA_Surf_20190924_wPiers_Clip.tif")
+topomat <- raster_to_matrix(topo)
+
+plot(topo)
+
+# topo_and_bath <- raster("images/MVVA_Surf_and_WSE_Max.tif")
+# plot(topo_and_bath)
+# topomat2 <- raster_to_matrix(topo_and_bath)
+
+
+
+```
+
+```{r piers}
+#ambientshadows = ambient_shade(topomat)
+
+topomat %>%
+  sphere_shade(texture = "imhof3") %>%
+  add_water(detect_water(topomat, max_height = 438, cutoff = .99), color = "lightblue") %>%
+  add_shadow(ray_shade(topomat),0.5) %>%
+  add_shadow(ambientshadows, max_darken = 0.1) %>%
+  plot_3d(topomat, zscale = .1, fov = 0, theta = 110, zoom = 0.75, phi = 45, windowsize = c(1000, 800))
+  # plot_3d(topomat, hillshade = topomat,baseshape = "rectangle", zscale=1, water = TRUE, watercolor="imhof2", waterlinecolor="white", waterlinealpha=0.5)
+Sys.sleep(0.2)
+render_snapshot(filename = "export/3d_addWater")
+
+
+
+```
+
+
+
+
+```{r bathy}
+
+#In order for rayshader to 3d plot water, negative values needed for bathymetry data
+bathymat <- topomat[] - 442
+
+
+bathymat %>%
+ sphere_shade() %>%
+ plot_3d(bathymat, water= TRUE, waterlinecolor = "white", theta = 75, phi = 30)
+render_snapshot(filename = "export/3d_toScale")
+
+
+
+
+```
+
+```{r movie}
+
+
+
+bathymat %>%
+ sphere_shade() %>%
+ plot_3d(bathymat, water= TRUE, waterlinecolor = "white", zscale=.1, theta = 75, phi = 30)
+render_movie(filename = "export/piers_oscillate.mp4", type = "oscillate")
+
+# rgl::rgl.clear()
+
+
+```
